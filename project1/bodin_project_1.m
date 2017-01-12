@@ -78,7 +78,7 @@ coeff_noise_db = -10:.5:10;
 coeff_noise = 10^(coeff_noise_db/10);
 
 awgn = randn(1,length(LFMsig));
-awgn = (coeff_noise.^2)'*awgn;
+awgn = sqrt(coeff_noise)'*awgn;
 
 sn_sim = awgn(1:end,:)+LFMsig;
 
@@ -96,6 +96,9 @@ snr_sim = power_ave_time_awgn./Pave;
 %% Task 3: Filter (S/N)_Sim
 
 %%% 3.A: Generate a Butterworth LPF of Order 4 with BW matching W_{-3.0dB}
+
+bpf_butter = butter(4,[1.384e6,5.151e6]/(samplefreq/2));
+% plot the filter response to verify functionality
 
 %%% 3.B: Filter the LFM Signal and (S/N)_{Sim} Realizations 
 
