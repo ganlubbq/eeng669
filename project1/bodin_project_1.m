@@ -74,16 +74,24 @@ power_10db_bw = sum(LFMpsd(index_10db_low_max:index_10db_high_max));
 %% Task 2: Generate Realizations of AWGN
 
 %%% Generate n_{AWGN}(t) and (S/N)_{Sim} with SNR in [-10.0 0.5 10.0] 
-coeff_noise = linspace(.38,4,20)';
+coeff_noise_db = -10:.5:10;
+coeff_noise = 10^(coeff_noise_db/10);
+
 awgn = randn(1,length(LFMsig));
-awgn = coeff_noise*awgn;
-power_awgn_time = var(awgn,0,2) + mean(awgn,2).^2;
+awgn = (coeff_noise.^2)'*awgn;
 
 sn_sim = awgn(1:end,:)+LFMsig;
-snr_sn_sim = 10*log10(Pave./power_awgn_time);
-%%% 2.A: Verify that (S/N)_Sim has SNR = 0.0 dB
+
+%%% 2.A: Verify the SNR of (S/N)_{Sim}
+power_ave_time_awgn = var(awgn,0,2) + mean(awgn,2).^2;
+power_ave_freq_awgn = var(awgn,0,2) + mean(awgn,2).^2;
+
+snr_sim = power_ave_time_awgn./Pave;
 
 %%% 2.B: Determine Bandwidth Containing ALL of the Simulated Noise Power
+
+% Generate PSDs for awgn and sum over all of it see that it matches time and
+% theoretical
 
 %% Task 3: Filter (S/N)_Sim
 
