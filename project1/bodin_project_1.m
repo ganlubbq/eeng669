@@ -22,87 +22,136 @@ rng(20170111); %seed the RNG for reproducable results
 %%% Generate the Linear FM Signal (s(t)_Sim)
 load lfm_sig.mat;
 
-%%% 1.A.i: -3.0 dB Bandwidth Based on Center Frequency Power
-index_CarFrq = floor(CarFrq/delf) + 1; % Carrier frequency is the middle of the signal
-power_CarFrq = 10*log10(NormSpec(index_CarFrq));
-
-down_3db_cent = power_CarFrq - 3.0; % -4.3526 dB
-f_3db_low_cent = 1.359e6; % graphically determined
-f_3db_high_cent = 5.144e6;
-bw_3db_cent = f_3db_high_cent - f_3db_low_cent;
-
-%%% 1.A.ii: -3.0 dB Bandwidth Based on Max Power
-down_3db_max = -3; % Max Power is 0.0 dB in NormSpec by definition
-f_3db_low_max = 1.384e6;
-f_3db_high_max = 5.151e6;
-bw_3db_max = f_3db_high_max - f_3db_low_max;
-
-%%% 1.B.i: -10.0 dB Bandwidth Based on Center Frequency Power
-down_10db_cent = power_CarFrq - 10.0; % -11.3526 dB
-f_10db_low_cent = 1.244e6; 
-f_10db_high_cent = 5.267e6; 
-bw_10db_cent = f_10db_high_cent - f_10db_low_cent;
-
-%%% 1.B.ii: -10.0 dB Bandwidth based on Max Power
-down_10db_max = -10;
-f_10db_low_max = 1.267e6; 
-f_10db_high_max = 5.244e6; 
-bw_10db_max = f_10db_high_max - f_10db_low_max;
-
-%%% 1.C: Bandwidth Containing ALL of the Simulated LFM signal power
-bw_all = fplot(end)-fplot(1);
-
-%%% 1.D: Average LFM Signal Power Contained in W_{-3.0dB} and W_{-10.0dB}
-
-% Diagnostic Plot to Find Indices for Summing Up Average Power
+%%% Diagnostic Plot to Find Indices of Interest
 % plot(10*log10(NormSpec(1:length(fplot))));
 % set(gca,'YLim',[-20 2])
 % grid
 % xlabel ('Index')
 % ylabel ('|IFFT|^{ 2} (dB)')
 
+%%% 1.A.i: -3.0 dB Bandwidth Based on Center Frequency Power
+
+% Setup Variables
+index_CarFrq = floor(CarFrq/delf) + 1; % Carrier frequency is the middle of the signal
+power_CarFrq = 10*log10(NormSpec(index_CarFrq));
+
+% find the 3.0 and 10.0 dB down levels
+down_3db = power_CarFrq - 3.0; % -4.3526 dB
+down_10db = power_CarFrq - 10.0; % -11.3526 dB
+
+% Graphically determined interpolation points for each level
+lfm_low_3db = 10*log10(NormSpec(123:124)); 
+lfm_high_3db = 10*log10(NormSpec(463:464));
+
+lfm_low_10db = 10*log10(NormSpec(112:113)); 
+lfm_high_10db = 10*log10(NormSpec(475:476));
+
+% 3 dB
+f_3db_low = interp1(lfm_low_3db, fplot(123:124),down_3db);
+f_3db_high = interp1(lfm_high_3db, fplot(463:464),down_3db);
+bw_3db = f_3db_high - f_3db_low;
+
+% 10 dB
+f_10db_low = interp1(lfm_low_10db, fplot(112:113),down_10db);
+f_10db_high = interp1(lfm_high_10db, fplot(475:476),down_10db);
+bw_10db = f_10db_high - f_10db_low;
+
+%%% 1.C: Bandwidth Containing ALL of the Simulated LFM signal power
+bw_all = fplot(end)-fplot(1);
+
+%%% 1.D: Average LFM Signal Power Contained in W_{-3.0dB} and W_{-10.0dB}
+
 % W_3db Average Power
-index_3db_low_max = 125;
-index_3db_high_max = 462;
-power_3db_bw = sum(LFMpsd(index_3db_low_max:index_3db_high_max));
+index_3db_low = 123;
+index_3db_high = 464;
+power_3db_bw = sum(LFMpsd(index_3db_low:index_3db_high));
 
 % W_10db Average Power
-index_10db_low_max = 114;
-index_10db_high_max = 473;
-power_10db_bw = sum(LFMpsd(index_10db_low_max:index_10db_high_max));
+index_10db_low = 112;
+index_10db_high = 476;
+power_10db_bw = sum(LFMpsd(index_10db_low:index_10db_high));
 
 %% Task 2: Generate Realizations of AWGN
 
 %%% Generate n_{AWGN}(t) and (S/N)_{Sim} with SNR in [-10.0 0.5 10.0] 
 coeff_noise_db = -10:.5:10;
-coeff_noise = 10^(coeff_noise_db/10);
+coeff_noise = 10.^(coeff_noise_db/10);
 
-awgn = randn(1,length(LFMsig));
-awgn = sqrt(coeff_noise)'*awgn;
-
-sn_sim = awgn(1:end,:)+LFMsig;
+agwn = randn(1,length(LFMsig));
+agwn = sqrt(coeff_noise*Pave)'*agwn;
+sn_sim = agwn(1:end,:)+LFMsig;
 
 %%% 2.A: Verify the SNR of (S/N)_{Sim}
-power_ave_time_awgn = var(awgn,0,2) + mean(awgn,2).^2;
-power_ave_freq_awgn = var(awgn,0,2) + mean(awgn,2).^2;
+power_ave_time_agwn = var(agwn,0,2) + mean(agwn,2).^2;
 
-snr_sim = power_ave_time_awgn./Pave;
+snr_sim = Pave./power_ave_time_agwn;
+snr_sim_db = 10*log10(snr_sim);
 
 %%% 2.B: Determine Bandwidth Containing ALL of the Simulated Noise Power
+fft_pts = 2^nextpow2(length(agwn(1,:)));
 
-% Generate PSDs for awgn and sum over all of it see that it matches time and
-% theoretical
+psd_agwn = abs(fft(agwn,fft_pts,2)/length(agwn(1,:))).^2;
+
+power_ave_freq_agwn = sum(psd_agwn,2)/2;
 
 %% Task 3: Filter (S/N)_Sim
 
 %%% 3.A: Generate a Butterworth LPF of Order 4 with BW matching W_{-3.0dB}
 
-bpf_butter = butter(4,[1.384e6,5.151e6]/(samplefreq/2));
+[butter_b butter_a] = butter(2,[f_3db_low,f_3db_high]/(FSamp/2));
+
 % plot the filter response to verify functionality
+
+[mag_butter, f_butter] = freqz(butter_b, butter_a, 5000, FSamp);
+
+figure(1) % Question about how you want to show this
+plot(f_butter,20*log10(abs(mag_butter))); %Question about 20 vs 10
+set(gca,'YLim',[-5 2])
+grid
+xlabel('Frequency (Hz)')
+ylabel('Magnitude (dB)')
+title('Magnitude Response of a 4^{th} order Butterworth BPF')
 
 %%% 3.B: Filter the LFM Signal and (S/N)_{Sim} Realizations 
 
-%%% 3.C: Plot (S/N)_{Sim} vs (S/N)_{Sys}
+LFM_sig_filt = filtfilt(butter_b, butter_a, LFMsig);
+
+for n=1:size(sn_sim,1)
+        sn_sys(n,:) = filtfilt(butter_b, butter_a, sn_sim(n,:));
+end
+
+%%% 3.C: Plot (S/N)_{Sim} vs (S/N)_{Sys} in Time
+
+figure(2)
+plot(TimVec,sn_sim(21,:)); % 0.0 dB point
+hold on
+plot(TimVec,sn_sys(21,:));
+grid
+xlabel('Time (s)')
+ylabel('Amplitude')
+title('S/N_{Sim} vs. S/N_{Sys}')
+legend(['S/N_{Sim}'; 'S/N_{Sys}'])
+hold off
+
+%%% 3.D: Plot (S/N)_{Sim} vs (S/N)_{Sys} in Freq
+
+psd_sn_sim = abs(fft(sn_sim(21,:))/length(sn_sim(21,:))).^2;
+psd_sn_sys = abs(fft(sn_sys(21,:))/length(sn_sys(21,:))).^2;
+
+figure(3)
+plot(fplot,10*log10(psd_sn_sim(1:length(fplot))));
+hold on
+plot(fplot,10*log10(psd_sn_sys(1:length(fplot))));
+set(gca,'YLim',[-30 -20])
+set(gca,'XLim',[1.2e6 5.2e6])
+grid
+xlabel ('Frequency (Hz)')
+ylabel ('|IFFT|^{ 2} (dB)')
+title('PSD of S/N_{Sim} vs. S/N_{Sys}')
+legend(['S/N_{Sim}'; 'S/N_{Sys}'])
+hold off
+
+%%% 3.E: Plot LFM sig vs LFM sig filt
 
 %% Task 4: Compare and Discuss the LFM time-domain at input and output
 
