@@ -91,7 +91,7 @@ agwn = randn(1,length(LFMsig));
 agwn = sqrt(coeff_noise*Pave)'*agwn;
 
 % Spectral Domain
-fft_pts = 2^nextpow2(length(agwn(1,:))); % Used for all subsequent ffts
+fft_pts = 2^nextpow2(length(agwn(1,:)))/2; % Used for all subsequent ffts
 psd_agwn = abs(fft(agwn,fft_pts,2)/length(agwn(1,:))).^2;
 
 % Power
@@ -132,8 +132,8 @@ set(gca,'YLim',[-5 2])
 line([f_3db_low f_3db_low],get(gca,'YLim'),'Color',[1 0 0])
 line([f_3db_high f_3db_high],get(gca,'YLim'),'Color',[1 0 0])
 line(get(gca,'Xlim'),[-3 -3],'Color',[1 0 0])
-text(f_3db_low, -3.2, [num2str(f_3db_low,'%10.3e') ' Hz']);
-text(f_3db_high, -3.2, [num2str(f_3db_high,'%10.3e') ' Hz']);
+text(f_3db_low, -3.2, [num2str(f_3db_low,'%10.3e') ' Hz'], 'FontSize', 12);
+text(f_3db_high, -3.2, [num2str(f_3db_high,'%10.3e') ' Hz'], 'FontSize', 12);
 grid
 xlabel('Frequency (Hz)')
 ylabel('Magnitude (dB)')
@@ -203,21 +203,22 @@ title('Filtered LFM Signal')
 figure(6)
 
 h(1) = subplot(1,2,1);
-plot(fplot,10*log10(NormSpec(1:length(fplot))));
+plot(fplot,10*log10(LFMpsd(1:length(fplot))));
 grid
 xlabel ('Frequency (Hz)')
 ylabel ('|IFFT|^{ 2} (dB)')
-title('Normalized PSD of the LFM Signal')
+title('PSD of the LFM Signal')
 
 h(2) = subplot(1,2,2);
 plot(fplot,10*log10(psd_LFMsig_filt(1:length(fplot)))); %/max(abs(psd_LFMsig_filt)
 grid
 xlabel ('Frequency (Hz)')
 ylabel ('|IFFT|^{ 2} (dB)')
-title('Normalized PSD of the Filtered LFM Signal')
+title('PSD of the Filtered LFM Signal')
 
-linkaxes(h,'x')
-xlim(h(1),[1e6 10e6])
+%linkaxes(h,'x')
+xlim(h,[1e6 5.5e6])
+ylim(h,[-40 -25])
 
 %%% 4.C Power Characteristics
 
@@ -243,18 +244,21 @@ title('Noise Structure After Filtering')
 %%% 5.B Spectral Characteristics
 figure(8)
 h(1) = subplot(1,2,1);
-plot(fplot,psd_agwn(21,1:length(fplot)));
+plot(fplot,10*log10(psd_agwn(21,1:length(fplot))));
 grid
 xlabel ('Frequency (Hz)')
 ylabel ('|IFFT|^{ 2} (dB)')
 title('Noise PSD Prior to Filtering')
 
 h(2) = subplot(1,2,2);
-plot(fplot,psd_agwn_filt(21,1:length(fplot)));
+plot(fplot,10*log10(psd_agwn_filt(21,1:length(fplot))));
 grid
 xlabel ('Frequency (Hz)')
 ylabel ('|IFFT|^{ 2} (dB)')
 title('Noise PSD After Filtering')
+
+linkaxes(h,'x')
+xlim(h,[0 1e7])
 
 %%% 5.C Power Characteristics
 
